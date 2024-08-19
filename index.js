@@ -25,7 +25,11 @@ const env = require('dotenv').config();
 
     await page.click('#submit-btn');
 
-    console.log('CAPTCHA megoldása automatikusan történik a kiterjesztéssel...');
+    //if (await page.$('.g-recaptcha') !== null) {
+    //  console.log('CAPTCHA detected, you need to solve it...');
+    //} else {
+    //  console.log('No CAPTCHA detected, continuing...');
+    //}
 
     await new Promise(r => setTimeout(r, 2000));
 
