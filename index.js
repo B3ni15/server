@@ -5,7 +5,7 @@ const env = require('dotenv').config();
 (async () => {
   try {
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
@@ -13,26 +13,51 @@ const env = require('dotenv').config();
 
     await page.goto('https://idp.e-kreta.hu/Account/Login?ReturnUrl=/connect/authorize/callback?prompt%3Dlogin%26nonce%3DwylCrqT4oN6PPgQn2yQB0euKei9nJeZ6_ffJ-VpSKZU%26response_type%3Dcode%26code_challenge_method%3DS256%26scope%3Dopenid%2520email%2520offline_access%2520kreta-ellenorzo-webapi.public%2520kreta-eugyintezes-webapi.public%2520kreta-fileservice-webapi.public%2520kreta-mobile-global-webapi.public%2520kreta-dkt-webapi.public%2520kreta-ier-webapi.public%26code_challenge%3DHByZRRnPGb-Ko_wTI7ibIba1HQ6lor0ws4bcgReuYSQ%26redirect_uri%3Dhttps%253A%252F%252Fmobil.e-kreta.hu%252Fellenorzo-student%252Fprod%252Foauthredirect%26client_id%3Dkreta-ellenorzo-student-mobile-ios%26state%3Drefilc_student_mobile%26suppressed_prompt%3Dlogin');
 
-    if (await page.$('.captcha-class-selector') !== null) {
-      console.log('CAPTCHA detected, please solve it manually...');
-      await page.waitForFunction(() => {
-        return document.querySelector('.captcha-class-selector') === null;
+    const apiKey = process.env.KEY;
+
+    async function solveCaptcha() {
+      const siteKey = await page.evaluate(() => {
+        // read the value of input.
       });
-      console.log('CAPTCHA solved, continuing...');
+
+      if (!siteKey) {
+        throw new Error('No CAPTCHA sitekey found!');
+      }
+
+      const captchaSolution = await axios.post(
+        `http://2captcha.com/in.php?key=${apiKey}&method=userrecaptcha&googlekey=${siteKey}&pageurl=${page.url()}`
+      );
+
+      const captchaId = captchaSolution.data.split('|')[1];
+
+      let captchaAnswer = null;
+
+      while (!captchaAnswer) {
+        await new Promise(r => setTimeout(r, 5000));
+
+        const solutionResponse = await axios.get(
+          `http://2captcha.com/res.php?key=${apiKey}&action=get&id=${captchaId}`
+        );
+
+        if (solutionResponse.data !== 'CAPCHA_NOT_READY') {
+          captchaAnswer = solutionResponse.data.split('|')[1];
+        }
+      }
+
+      await page.evaluate(`document.getElementById("g-recaptcha-response").value="${captchaAnswer}"`);
     }
-    
+
     await page.waitForSelector('#UserName');
-    
-    await page.type('#UserName', String(process.env.TAJ));
-    await page.type('#Password', String(process.env.PASSWORD));
-    await page.type('input[data-bs-toggle="dropdown"]', String(process.env.INSTITUTE));
-    
-    setTimeout(async () => {}, 2000);
+    await page.type('#UserName', process.env.TAJ);
+    await page.type('#Password', process.env.PASSWORD);
+    await page.type('input[data-bs-toggle="dropdown"]', process.env.INSTITUTE);
+
+    await new Promise(r => setTimeout(r, 2000));
 
     await page.click('#submit-btn');
 
     await page.waitForNavigation();
-  
+
     const url = page.url();
     console.log('Redirected URL:', url);
 
