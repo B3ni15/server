@@ -1,4 +1,5 @@
 const axios = require('axios');
+const moment = require('moment');
 
 module.exports = async function (req, res) {
     const { TOKEN, INSTITUTE } = req.body;
@@ -11,7 +12,7 @@ module.exports = async function (req, res) {
     const fromDate = getCurrentMonday();
     const toDate = getCurrentFriday();
 
-    console.log(fromDate, toDate)
+    //console.log(fromDate, toDate)
 
     const orarend = new Orarend(TOKEN, INSTITUTE, fromDate, toDate);
     try {
@@ -36,7 +37,7 @@ function getCurrentFriday() {
     return friday.format('YYYY-MM-DD');
 }
 
-console.log(getCurrentMonday(), getCurrentFriday());
+//console.log(getCurrentMonday(), getCurrentFriday());
 
 class Orarend {
     constructor(token, ist, fromDate, toDate) {

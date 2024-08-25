@@ -14,7 +14,7 @@ module.exports = async function (req, res) {
     (async () => {
       try {
         const browser = await puppeteer.launch({
-          headless: true,
+          headless: false,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox'
@@ -51,14 +51,14 @@ module.exports = async function (req, res) {
   
         await new Promise(r => setTimeout(r, 2000));
         const url = page.url();
-        console.log('Redirected URL:', url);
+        //console.log('Redirected URL:', url);
   
         const urlParams = new URLSearchParams(new URL(url).search);
         const code = urlParams.get('code');
-        console.log('Code:', code);
+        //console.log('Code:', code);
   
         const accessToken = await getAccessToken(code);
-        console.log('Access Token:', accessToken);
+        //console.log('Access Token:', accessToken);
   
         res.status(200).json({
           success: true,
