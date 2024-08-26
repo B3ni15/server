@@ -48,6 +48,17 @@ module.exports = async function (req, res) {
         await new Promise(r => setTimeout(r, 2000));
   
         await page.click('#submit-btn');
+
+        // captcha detection
+
+        if (await page.$('#recaptcha')) {
+          console.log('Captcha detected, waiting for user input...');
+          await browser.close();
+          return res.status(500).json({
+            success: false,
+            message: 'Captcha detected, waiting for user input...',
+          });
+        }
   
         await new Promise(r => setTimeout(r, 2000));
         const url = page.url();
