@@ -49,8 +49,6 @@ module.exports = async function (req, res) {
   
         await page.click('#submit-btn');
 
-        // captcha detection
-
         if (await page.$('#recaptcha')) {
           console.log('Captcha detected, waiting for user input...');
           await browser.close();
