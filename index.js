@@ -1,44 +1,105 @@
-const puppeteer = require('puppeteer');
+const express = require('express');
 const axios = require('axios');
-const env = require('dotenv').config();
+const puppeteer = require('puppeteer');
+const moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+const app = express();
+const port = 3000;
 
-(async () => {
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.redirect('/api');
+});
+
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API is working!',
+  });
+});
+
+app.post('/api/user/login', (req, res) => {
+  require('./routes/user/login')(req, res);
+});
+
+app.get('/api/user/info', async (req, res) => {
+  require('./routes/user/info')(req, res);
+});
+
+app.get('/api/user/orarend', async (req, res) => {
+  require('./routes/user/orarend')(req, res);
+});
+
+app.get('/api/user/orarend/kep', async (req, res) => {
+  require('./routes/user/orarendkep')(req, res);
+});
+
+app.get('/api/user/orarend/kep/:id', async (req, res) => {
+  const id = req.params.id;
+  const imagePath = path.join(__dirname, 'kepek', `${id}.png`);
+
+  if (fs.existsSync(imagePath)) {
+    res.status(200).sendFile(imagePath);
+  } else {
+    res.status(404).send('Not Found');
+  }
+});
+
+app.get('/api/user/evaluations', async (req, res) => {
+  const { TOKEN, INSTITUTE, DATUMTOL, DATUMIG } = req.query;
+
+  if (!TOKEN || !INSTITUTE || !DATUMTOL || !DATUMIG) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const response = await axios.get(
+      `https://${INSTITUTE}.e-kreta.hu/ellenorzo/v3/sajat/Ertekelesek`,
+      {
+        params: { datumTol: DATUMTOL, datumIg: DATUMIG },
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          'User-Agent': 'hu.ekreta.tanulo/1.0.5/Android/0/0',
+        },
+      }
+    );
+    res.status(200).json(response.data);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
+async function processPuppeteer() {
+  try {
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
+    await page.goto(
+      'https://idp.e-kreta.hu/Account/Login?ReturnUrl=/connect/authorize/callback?prompt=login&response_type=code&client_id=kreta-ellenorzo-student-mobile-ios'
+    );
 
-    await page.goto('https://idp.e-kreta.hu/Account/Login?ReturnUrl=/connect/authorize/callback?prompt%3Dlogin%26nonce%3DwylCrqT4oN6PPgQn2yQB0euKei9nJeZ6_ffJ-VpSKZU%26response_type%3Dcode%26code_challenge_method%3DS256%26scope%3Dopenid%2520email%2520offline_access%2520kreta-ellenorzo-webapi.public%2520kreta-eugyintezes-webapi.public%2520kreta-fileservice-webapi.public%2520kreta-mobile-global-webapi.public%2520kreta-dkt-webapi.public%2520kreta-ier-webapi.public%26code_challenge%3DHByZRRnPGb-Ko_wTI7ibIba1HQ6lor0ws4bcgReuYSQ%26redirect_uri%3Dhttps%253A%252F%252Fmobil.e-kreta.hu%252Fellenorzo-student%252Fprod%252Foauthredirect%26client_id%3Dkreta-ellenorzo-student-mobile-ios%26state%3Drefilc_student_mobile%26suppressed_prompt%3Dlogin');
-
-    await page.waitForSelector('#UserName');
     await page.type('#UserName', process.env.TAJ);
     await page.type('#Password', process.env.PASSWORD);
-    await page.type('input[data-bs-toggle="dropdown"]', process.env.INSTITUTE);
 
-    await new Promise(r => setTimeout(r, 2000));
-
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     await page.click('#submit-btn');
-
     await page.waitForNavigation();
 
-    const url = page.url();
-    console.log('Redirected URL:', url);
-
-    const urlParams = new URLSearchParams(new URL(url).search);
+    const redirectedUrl = page.url();
+    const urlParams = new URLSearchParams(new URL(redirectedUrl).search);
     const code = urlParams.get('code');
-    console.log('Code:', code);
 
-    const accessToken = await getAccessToken(code);
-    console.log('Access Token:', accessToken);
+    if (code) {
+      const accessToken = await getAccessToken(code);
+      console.log('Access Token:', accessToken);
+    }
 
     await browser.close();
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error during Puppeteer process:', error);
   }
-})();
+}
 
 async function getAccessToken(code) {
   try {
@@ -52,15 +113,47 @@ async function getAccessToken(code) {
         code_verifier: 'DSpuqj_HhDX4wzQIbtn8lr8NLE5wEi1iVLMtMK0jY6c',
       }),
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': '*/*',
-          'User-Agent': 'eKretaStudent/264745 CFNetwork/1494.0.7 Darwin/23.4.0',
-        }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       }
     );
     return response.data.access_token;
   } catch (error) {
-    console.error('Failed to get access token:', error);
+    console.error('Error fetching access token:', error.message);
+    throw error;
   }
 }
+
+setInterval(async () => {
+  await processPuppeteer();
+
+  const directory = path.join(__dirname, 'kepek');
+  fs.readdir(directory, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      return;
+    }
+    files.forEach((file) => {
+      fs.unlink(path.join(directory, file), (err) => {
+        if (err) {
+          console.error('Error deleting file:', file, err);
+        } else {
+          console.log('File deleted:', file);
+        }
+      });
+    });
+  });
+}, 30 * 60 * 1000);
+
+function getCurrentMonday() {
+  return moment().startOf('isoWeek').format('YYYY-MM-DD');
+}
+
+function getCurrentFriday() {
+  return moment().endOf('isoWeek').format('YYYY-MM-DD');
+}
+
+console.log('Current Monday:', getCurrentMonday(), 'Current Friday:', getCurrentFriday());
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
