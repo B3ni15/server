@@ -58,13 +58,17 @@ module.exports = async function (req, res) {
           });
         }
   
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 3500));
         const url = page.url();
         //console.log('Redirected URL:', url);
+
+        await new Promise(r => setTimeout(r, 2000));
   
         const urlParams = new URLSearchParams(new URL(url).search);
         const code = urlParams.get('code');
         //console.log('Code:', code);
+
+        await new Promise(r => setTimeout(r, 2000));
   
         const accessToken = await getAccessToken(code);
         //console.log('Access Token:', accessToken);
@@ -72,7 +76,7 @@ module.exports = async function (req, res) {
         res.status(200).json({
           success: true,
           message: 'Successfully logged in.',
-          token: accessToken,
+          data: accessToken,
         });
   
         await browser.close();
@@ -105,7 +109,7 @@ async function getAccessToken(code) {
           }
         }
       );
-      return response.data.access_token;
+      return response.data;
     } catch (error) {
       console.error('Failed to get access token:', error);
       throw new Error('Failed to get access token.');
