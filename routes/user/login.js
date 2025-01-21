@@ -52,25 +52,27 @@ module.exports = async function (req, res) {
     console.log('[INFO] Waiting for redirect...');
     await page.waitForNavigation({ timeout: 10000 });
 
-    const redirectedURL = page.url();
-    console.log(`[INFO] Redirected to URL: ${redirectedURL}`);
+    setTimeout(async () => {
+      const redirectedURL = page.url();
+      console.log(`[INFO] Redirected to URL: ${redirectedURL}`);
 
-    const code = new URL(redirectedURL).searchParams.get('code');
-    if (!code) {
-      throw new Error('Authorization code not found in URL.');
-    }
+      const code = new URL(redirectedURL).searchParams.get('code');
+      if (!code) {
+        throw new Error('Authorization code not found in URL.');
+      }
 
-    console.log('[INFO] Authorization code extracted, requesting access token...');
-    const accessToken = await getAccessToken(code);
+      console.log('[INFO] Authorization code extracted, requesting access token...');
+      const accessToken = await getAccessToken(code);
 
-    console.log('[INFO] Access token received.');
-    res.status(200).json({
-      success: true,
-      message: 'Successfully logged in.',
-      data: accessToken,
-    });
+      console.log('[INFO] Access token received.');
+      res.status(200).json({
+        success: true,
+        message: 'Successfully logged in.',
+        data: accessToken,
+      });
 
-    await browser.close();
+      await browser.close();
+    }, 2000);
   } catch (error) {
     console.error(`[ERROR] ${error.message}`);
     res.status(500).json({
