@@ -1,5 +1,5 @@
 const axios = require('axios');
-const puppeteer = require('puppeteer');
+const { chromium } = require('playwright');
 
 module.exports = async function (req, res) {
   const { USERNAME, PASSWORD, INSTITUTE } = req.body;
@@ -15,10 +15,10 @@ module.exports = async function (req, res) {
   }
 
   try {
-    console.log('[INFO] Launching Puppeteer browser...');
-    const browser = await puppeteer.launch({
+    console.log('[INFO] Launching Playwright browser...');
+    const browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--platform', 'linux'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
@@ -31,14 +31,14 @@ module.exports = async function (req, res) {
     await page.waitForSelector('#UserName', { timeout: 10000 });
 
     console.log('[INFO] Filling in the login form...');
-    await page.type('#UserName', USERNAME);
-    await page.type('#Password', PASSWORD);
-    await page.type('input[data-bs-toggle="dropdown"]', INSTITUTE);
+    await page.fill('#UserName', USERNAME);
+    await page.fill('#Password', PASSWORD);
+    await page.fill('input[data-bs-toggle="dropdown"]', INSTITUTE);
 
     console.log('[INFO] Clicking submit button...');
     await Promise.all([
       page.click('#submit-btn'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }),
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }),
     ]);
 
     console.log('[INFO] Checking for potential CAPTCHA...');
