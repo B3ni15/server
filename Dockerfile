@@ -1,7 +1,7 @@
 FROM arm64v8/node:18
 
 RUN apt update && apt install -y \
-  chromium-browser \
+  chromium \
   libnss3 \
   libxss1 \
   libatk1.0-0 \
@@ -16,6 +16,6 @@ RUN apt update && apt install -y \
 
 RUN npm install puppeteer
 
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 CMD ["node"]
