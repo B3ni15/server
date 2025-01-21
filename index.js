@@ -32,21 +32,6 @@ app.get('/api/user/orarend', async (req, res) => {
   require('./routes/user/orarend')(req, res);
 });
 
-app.get('/api/user/orarend/kep', async (req, res) => {
-  require('./routes/user/orarendkep')(req, res);
-});
-
-app.get('/api/user/orarend/kep/:id', async (req, res) => {
-  const id = req.params.id;
-  const imagePath = path.join(__dirname, 'kepek', `${id}.png`);
-
-  if (fs.existsSync(imagePath)) {
-    res.status(200).sendFile(imagePath);
-  } else {
-    res.status(404).send('Not Found');
-  }
-});
-
 app.get('/api/user/evaluations', async (req, res) => {
   const { TOKEN, INSTITUTE, DATUMTOL, DATUMIG } = req.query;
 
