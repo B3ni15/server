@@ -17,7 +17,7 @@ module.exports = async function (req, res) {
   try {
     console.log('[INFO] Launching Puppeteer browser...');
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
@@ -28,7 +28,7 @@ module.exports = async function (req, res) {
     );
 
     console.log('[INFO] Waiting for username input field...');
-    await page.waitForSelector('#UserName', { timeout: 5000 });
+    await page.waitForSelector('#UserName', { timeout: 10000 });
 
     console.log('[INFO] Filling in the login form...');
     await page.type('#UserName', USERNAME);
@@ -36,9 +36,12 @@ module.exports = async function (req, res) {
     await page.type('input[data-bs-toggle="dropdown"]', INSTITUTE);
 
     console.log('[INFO] Clicking submit button...');
-    await page.click('#submit-btn');
+    await Promise.all([
+      page.click('#submit-btn'),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }),
+    ]);
 
-    console.log('[INFO] Waiting for potential CAPTCHA...');
+    console.log('[INFO] Checking for potential CAPTCHA...');
     const captchaDetected = await page.$('#recaptcha');
     if (captchaDetected) {
       console.warn('[WARNING] CAPTCHA detected, manual input required.');
@@ -49,30 +52,29 @@ module.exports = async function (req, res) {
       });
     }
 
-    console.log('[INFO] Waiting for redirect...');
-    await page.waitForNavigation({ timeout: 10000 });
+    console.log('[INFO] Extracting redirected URL...');
+    const redirectedURL = page.url();
+    console.log(`[INFO] Redirected to URL: ${redirectedURL}`);
 
-    setTimeout(async () => {
-      const redirectedURL = page.url();
-      console.log(`[INFO] Redirected to URL: ${redirectedURL}`);
+    if (!redirectedURL.includes('code=')) {
+      throw new Error('Authorization code not found in the redirected URL.');
+    }
 
-      const code = new URL(redirectedURL).searchParams.get('code');
-      if (!code) {
-        throw new Error('Authorization code not found in URL.');
-      }
+    console.log('[INFO] Extracting authorization code...');
+    const code = new URL(redirectedURL).searchParams.get('code');
+    console.log(`[INFO] Authorization code extracted: ${code}`);
 
-      console.log('[INFO] Authorization code extracted, requesting access token...');
-      const accessToken = await getAccessToken(code);
+    console.log('[INFO] Requesting access token...');
+    const accessToken = await getAccessToken(code);
 
-      console.log('[INFO] Access token received.');
-      res.status(200).json({
-        success: true,
-        message: 'Successfully logged in.',
-        data: accessToken,
-      });
+    console.log('[INFO] Access token received successfully.');
+    res.status(200).json({
+      success: true,
+      message: 'Successfully logged in.',
+      data: accessToken,
+    });
 
-      await browser.close();
-    }, 2000);
+    await browser.close();
   } catch (error) {
     console.error(`[ERROR] ${error.message}`);
     res.status(500).json({
