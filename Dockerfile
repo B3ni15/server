@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM node:20-slim
 
 ENV TZ=Europe/Budapest \
     DEBIAN_FRONTEND=noninteractive
@@ -25,15 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-FROM base AS build
-
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm install --frozen-lockfile
 
 RUN pnpm exec playwright install chromium
-
-FROM base AS final
 
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/package.json /app/package.json
