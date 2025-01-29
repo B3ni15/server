@@ -20,7 +20,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Verify Node.js installation
+# Ensure npm is up to date
+RUN corepack enable && npm install -g npm
+
+# Verify Node.js and npm installation
 RUN node -v && npm -v
 
 # Install system dependencies required for Playwright
