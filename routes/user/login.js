@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 module.exports = async function (req, res) {
   const { USERNAME, PASSWORD, INSTITUTE } = req.body;
 
-  console.log(`[INFO] Received request with body: ${JSON.stringify(req.body)}`);
+  console.log(`[INFO] Received request...`);
 
   if (!USERNAME || !PASSWORD || !INSTITUTE) {
     console.error(`[ERROR] Missing parameters: ${JSON.stringify({ USERNAME, PASSWORD, INSTITUTE })}`);
