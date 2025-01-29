@@ -1,36 +1,11 @@
-# Use a base image
-FROM ubuntu:20.04
+FROM node:20-slim AS base
 
-# Set non-interactive mode to avoid timezone prompt
-ENV DEBIAN_FRONTEND=noninteractive \
-    TZ=Europe/Budapest \
-    NODE_VERSION=latest
+ENV TZ=Europe/Budapest \
+    DEBIAN_FRONTEND=noninteractive
 
-# Install required dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    tzdata \
     ca-certificates \
-    gnupg && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone
-
-# Add NodeSource repository for the latest Node.js version
-RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Ensure npm is up to date
-RUN corepack enable && npm install -g npm
-
-# Enable pnpm using corepack (no need for npm install -g pnpm)
-RUN corepack prepare pnpm@latest --activate
-
-# Verify installations
-RUN node -v && npm -v && pnpm -v
-
-# Install system dependencies required for Playwright
-RUN apt-get update && apt-get install -y \
     libnss3 \
     libnspr4 \
     libdbus-1-3 \
@@ -44,18 +19,24 @@ RUN apt-get update && apt-get install -y \
     libgbm1 \
     libxkbcommon0 \
     libasound2 && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY package.json ./
-RUN pnpm install
-RUN pnpm exec playwright install
+FROM base AS build
 
-# Copy the rest of the application code
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --frozen-lockfile
+
+RUN pnpm exec playwright install chromium
+
+FROM base AS final
+
+COPY --from=build /app/node_modules /app/node_modules
+COPY --from=build /app/package.json /app/package.json
 COPY . .
 
-# Start the application
 CMD ["pnpm", "start"]
