@@ -52,6 +52,14 @@ app.get('/api/user/evaluations', async (req, res) => {
   }
 });
 
+function getCurrentMonday() {
+  return moment().startOf('isoWeek').format('YYYY-MM-DD');
+}
+
+function getCurrentFriday() {
+  return moment().endOf('isoWeek').format('YYYY-MM-DD');
+}
+
 console.log('Current Monday:', getCurrentMonday(), 'Current Friday:', getCurrentFriday());
 
 app.listen(port, () => {
