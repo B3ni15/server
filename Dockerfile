@@ -1,5 +1,6 @@
 FROM node:20-slim
 
+# Set timezone
 ENV TZ=Europe/Budapest \
     DEBIAN_FRONTEND=noninteractive
 
@@ -25,14 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile
 
+# Copy package.json and install dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 RUN pnpm exec playwright install chromium
 
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/package.json /app/package.json
+# Copy project files
 COPY . .
 
+# Start the application
 CMD ["pnpm", "start"]
