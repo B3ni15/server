@@ -1,5 +1,5 @@
 # Use a base image
-FROM node:14
+FROM node
 
 # Install pnpm
 RUN npm install -g pnpm
