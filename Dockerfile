@@ -23,8 +23,11 @@ RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
 # Ensure npm is up to date
 RUN corepack enable && npm install -g npm
 
-# Verify Node.js and npm installation
-RUN node -v && npm -v
+# Enable pnpm using corepack (no need for npm install -g pnpm)
+RUN corepack prepare pnpm@latest --activate
+
+# Verify installations
+RUN node -v && npm -v && pnpm -v
 
 # Install system dependencies required for Playwright
 RUN apt-get update && apt-get install -y \
@@ -42,9 +45,6 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon0 \
     libasound2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install pnpm
-RUN npm install -g pnpm
 
 # Set the working directory
 WORKDIR /app
